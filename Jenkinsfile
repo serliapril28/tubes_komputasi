@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "serliapril284/tubes_komputasi:${BUILD_NUMBER}"
-		// DOCKER_USERNAME = credentials("login-please")
-        // DOCKER_PASSWORD = credentials("login-please")
+		// DOCKER_USERNAME = credentials("docker-tubes")
+        // DOCKER_PASSWORD = credentials("docker-tubes")
         DISCORD_WEBHOOK = credentials("webhook-discord")
     }
 
@@ -25,7 +25,7 @@ pipeline {
 
         stage('push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'login-please',
+                withCredentials([usernamePassword(credentialsId: 'docker-tubes',
                  usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]){
                     bat """
                     echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
