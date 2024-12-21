@@ -2,22 +2,85 @@ pipeline {
     agent any
 
     environment {
-
+        DOCKER_IMAGE = "serliapril284/tubes_komputasi:${BUILD_NUMBER}"
+		// DOCKER_USERNAME = credentials("docker-credential")
+        // DOCKER_PASSWORD = credentials("docker-credential")
+        DISCORD_WEBHOOK = credentials("discrod-webhook-id")
     }
 
     stages {
-        stage('Checkout Kode Sumber') {
+        stage('Clone Repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/BlazerKers354/tubeskomputasiawan.git'
+                checkout scm
             }
         }
 
-    post {
-        success {
-            echo 'Pipeline berhasil dijalankan!'
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    bat "docker build -t ${DOCKER_IMAGE} ."
+                }
+            }
         }
+
+        stage('push Docker Image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker-credential',
+                 usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]){
+                    bat """
+                    echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+                    docker push ${DOCKER_IMAGE}
+                    """
+                }
+            }
+        }
+
+        stage('Notify Discord') {
+            steps {
+                script {
+                    def message = [
+                        "content": "Pipeline berhasil",
+                        "embeds": [
+                            [
+                                "title": "docker build dan push",
+                                "description": "Image `${DOCKER_IMAGE}` berhasil di push",
+                                "color": 3066993
+                            ]
+                        ]
+                    ]
+                    httpRequest(
+                        httpMode: 'POST',
+                        acceptType: 'APPLICATION_JSON',
+                        contentType: 'APPLICATION_JSON',
+                        requestBody: groovy.json.JsonOutput.toJson(message),
+                        url: DISCORD_WEBHOOK
+                    )
+                }
+            }
+        }
+    }
+
+    post {
         failure {
-            echo 'Pipeline gagal, periksa log untuk detail kesalahan!'
+            script {
+                def message = [
+                    "content": "Pipeline gagal",
+                    "embeds": [
+                        [
+                            "title": "Pipeline gagal",
+                            "description": "Tterdapat kesalahan",
+                            "color": 15158332
+                        ]
+                    ]
+                ]
+                httpRequest(
+                    httpMode: 'POST',
+                    acceptType: 'APPLICATION_JSON',
+                    contentType: 'APPLICATION_JSON',
+                    requestBody: groovy.json.JsonOutput.toJson(message),
+                    url: DISCORD_WEBHOOK
+                )
+            }
         }
     }
 }
