@@ -3,9 +3,9 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "serliapril284/tubes_komputasi:${BUILD_NUMBER}"
-		// DOCKER_USERNAME = credentials("docker-credential")
-        // DOCKER_PASSWORD = credentials("docker-credential")
-        DISCORD_WEBHOOK = credentials("discrod-webhook-id")
+		// DOCKER_USERNAME = credentials("docker-jenkins")
+        // DOCKER_PASSWORD = credentials("docker-jenkins")
+        DISCORD_WEBHOOK = credentials("webhook-discord")
     }
 
     stages {
@@ -25,7 +25,7 @@ pipeline {
 
         stage('push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-credential',
+                withCredentials([usernamePassword(credentialsId: 'docker-jenkins',
                  usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]){
                     bat """
                     echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
