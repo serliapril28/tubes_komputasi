@@ -38,20 +38,6 @@ pipeline {
                 }
             }
         }
-    
-        stage('Notif Microsoft Team') {
-            steps {
-                echo "Sending notification to Microsoft Teams..."
-                script {
-                    def curlCommand = """
-                        curl -H "Content-Type: application/json" -d '{
-                          "text": "Build selesai! Status: SUCCESS"
-                        }' ${TEAMS_WEBHOOK}
-                    """
-                    bat curlCommand
-                }
-            }
-        }
 
         stage('Notif Discord') {
             steps {
@@ -78,6 +64,19 @@ pipeline {
             }
         }
 
+        stage('Notif Microsoft Team') {
+            steps {
+                echo "Sending notification to Microsoft Teams..."
+                script {
+                    def curlCommand = """
+                        curl -H "Content-Type: application/json" -d '{
+                          "text": "Build selesai! Status: SUCCESS"
+                        }' ${TEAMS_WEBHOOK}
+                    """
+                    bat curlCommand
+                }
+            }
+        }
     }
 
     post {
