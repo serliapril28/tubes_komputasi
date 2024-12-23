@@ -68,12 +68,9 @@ pipeline {
             steps {
                 echo "Sending notification to Microsoft Teams..."
                 script {
-                    def curlCommand = """
-                        curl -H "Content-Type: application/json" -d '{
-                          "text": "Build selesai! Status: SUCCESS"
-                        }' ${TEAMS_WEBHOOK}
-                    """
-                    bat curlCommand
+                    bat """
+                        curl -H "Content-Type: application/json" -X POST -d "{\\"text\\": \\"Build selesai! Status: SUCCESS\\"}" ${TEAMS_WEBHOOK}
+                """
                 }
             }
         }
