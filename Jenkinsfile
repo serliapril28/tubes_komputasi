@@ -1,3 +1,7 @@
+//docker-compose up --build
+//docker-compose exec app php artisan migrate
+//docker-compose down
+//docker run -d --name nama-container image-name
 pipeline { 
     agent any
 
