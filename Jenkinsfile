@@ -1,7 +1,3 @@
-//docker-compose up --build
-//docker-compose exec app php artisan migrate
-//docker-compose down
-//docker run -d --name nama-container image-name
 pipeline { 
     agent any
 
@@ -12,36 +8,18 @@ pipeline {
     }
 
     stages {
-        stage('1. Planning') {
+        stage('Clone Repository') {
             steps {
-                echo "Planning the pipeline and defining objectives..."
+               echo "Cloning repository..."
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: 'main']],
+                    userRemoteConfigs: [[url: 'https://github.com/serliapril28/tubes_komputasi.git']]
+                ])
             }
         }
-
-        stage('2. Analysis') {
+        stage('Build Docker Image') {
             steps {
-                echo "Analyzing requirements and preparing resources..."
-                echo "Fetching repository and credentials for pipeline."
-            }
-        }
-
-        stage('3. Design') {
-            steps {
-                echo "Designing the Docker architecture and CI/CD stages..."
-            }
-        }
-
-        stage('4. Implementation') {
-            steps {
-                echo "Implementing the solution..."
-                echo "Cloning repository..."
-                checkout scm
-            }
-        }
-
-        stage('5. Testing') {
-            steps {
-                echo "Testing the application..."
                 echo "Building Docker image..."
                 script {
                     bat "docker build -t ${DOCKER_IMAGE} ."
@@ -49,9 +27,9 @@ pipeline {
             }
         }
 
-        stage('6. Deployment') {
+        stage('Push Docker Image') {
             steps {
-                echo "Deploying Docker image to registry..."
+                echo "Pushing Docker image to registry..."
                 withCredentials([usernamePassword(credentialsId: 'docker-tubes', 
                  usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     bat """
@@ -64,17 +42,16 @@ pipeline {
             }
         }
 
-        stage('7. Maintenance') {
+        stage('Notif Discord') {
             steps {
-                echo "Sending notifications to Discord and Microsoft Teams for maintenance and updates..."
+                echo "Sending notification to Discord..."
                 script {
-                    // Discord notification
-                    def discordMessage = [
+                    def message = [
                         "content": "Pipeline berhasil",
                         "embeds": [
                             [
-                                "title": "Pipeline Execution",
-                                "description": "Image `${DOCKER_IMAGE}` successfully pushed.",
+                                "title": "docker build dan push",
+                                "description": "Image `${DOCKER_IMAGE}` berhasil di push",
                                 "color": 3066993
                             ]
                         ]
@@ -83,14 +60,20 @@ pipeline {
                         httpMode: 'POST',
                         acceptType: 'APPLICATION_JSON',
                         contentType: 'APPLICATION_JSON',
-                        requestBody: groovy.json.JsonOutput.toJson(discordMessage),
+                        requestBody: groovy.json.JsonOutput.toJson(message),
                         url: DISCORD_WEBHOOK
                     )
+                }
+            }
+        }
 
-                    // Microsoft Teams notification
+        stage('Notif Microsoft Team') {
+            steps {
+                echo "Sending notification to Microsoft Teams..."
+                script {
                     bat """
-                        curl -H "Content-Type: application/json" -X POST -d "{\\"text\\": \\"Pipeline executed successfully!\\"}" ${TEAMS_WEBHOOK}
-                    """
+                        curl -H "Content-Type: application/json" -X POST -d "{\\"text\\": \\"Build selesai! Status: SUCCESS\\"}" ${TEAMS_WEBHOOK}
+                """
                 }
             }
         }
@@ -98,33 +81,32 @@ pipeline {
 
     post {
         failure {
-            steps {
+            script {
                 echo "Pipeline failed. Sending failure notifications..."
-                script {
-                    def discordMessage = [
-                        "content": "Pipeline failed",
-                        "embeds": [
-                            [
-                                "title": "Pipeline Execution Failed",
-                                "description": "An error occurred during the pipeline execution.",
-                                "color": 15158332
-                            ]
+                def discordMessage = [
+                    "content": "Pipeline gagal",
+                    "embeds": [
+                        [
+                            "title": "Pipeline gagal",
+                            "description": "Terdapat kesalahan",
+                            "color": 15158332
                         ]
                     ]
-                    httpRequest(
-                        httpMode: 'POST',
-                        acceptType: 'APPLICATION_JSON',
-                        contentType: 'APPLICATION_JSON',
-                        requestBody: groovy.json.JsonOutput.toJson(discordMessage),
-                        url: DISCORD_WEBHOOK
-                    )
-
-                    bat """
-                        curl -H "Content-Type: application/json" -d '{
-                          "text": "Pipeline failed! Check logs for details."
-                        }' ${TEAMS_WEBHOOK}
-                    """
-                }
+                ]
+                httpRequest(
+                    httpMode: 'POST',
+                    acceptType: 'APPLICATION_JSON',
+                    contentType: 'APPLICATION_JSON',
+                    requestBody: groovy.json.JsonOutput.toJson(discordMessage),
+                    url: DISCORD_WEBHOOK
+                )
+ 
+                def teamsCurlCommand = """
+                    curl -H "Content-Type: application/json" -d '{
+                      "text": "Pipeline gagal! Periksa log untuk detailnya."
+                    }' ${TEAMS_WEBHOOK}
+                """
+                bat teamsCurlCommand
             }
         }
     }
